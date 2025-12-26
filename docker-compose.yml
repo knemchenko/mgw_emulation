@@ -1,0 +1,176 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: mosquitto
+    ports: ["1883:1883"]
+    volumes:
+      - ./configs/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./logs/mosquitto:/mosquitto/log
+    networks: [mgw]
+
+  identity-manager:
+    build:
+      context: .
+      dockerfile: services/identity-manager/Dockerfile
+    environment:
+      - LOG_DIR=/logs/identity-manager
+      - PORT=8001
+    volumes:
+      - ./logs/identity-manager:/logs/identity-manager
+      - ./configs/workload.yml:/app/configs/workload.yml:ro
+    ports: ["8001:8001"]
+    networks: [mgw]
+
+  acp-router:
+    build:
+      context: .
+      dockerfile: services/acp-router/Dockerfile
+    environment:
+      - SEMANTIC_CORE_URL=http://semantic-core:8003
+      - LOG_DIR=/logs/acp-router
+      - PORT=8002
+    volumes:
+      - ./logs/acp-router:/logs/acp-router
+    ports: ["8002:8002"]
+    networks: [mgw]
+
+  semantic-core:
+    build:
+      context: .
+      dockerfile: services/semantic-core/Dockerfile
+    environment:
+      - IDENTITY_URL=http://identity-manager:8001
+      - MQTT_HOST=mosquitto
+      - MQTT_PORT=1883
+      - KG_PATH=/app/kg/semantic_drivers.ttl
+      - DECODER_MODE=${DECODER_MODE:-ontology}
+      - P2P_MODE=${P2P_MODE:-0}
+      - APP_COUNT=${APP_COUNT:-1}
+      - LOG_DIR=/logs/semantic-core
+      - PORT=8003
+    volumes:
+      - ./logs/semantic-core:/logs/semantic-core
+      - ./kg:/app/kg:ro
+    ports: ["8003:8003"]
+    depends_on: [mosquitto, identity-manager]
+    networks: [mgw]
+
+  protocol-agent-lora:
+    build:
+      context: .
+      dockerfile: services/protocol-agent/Dockerfile
+    environment:
+      - PROTOCOL=lora
+      - ACP_URL=http://acp-router:8002/ingest
+      - UDP_LISTEN=0.0.0.0:9001
+      - LOG_DIR=/logs/protocol-agent-lora
+      - P2P_MODE=${P2P_MODE:-0}
+    volumes:
+      - ./logs/protocol-agent-lora:/logs/protocol-agent-lora
+      - ./configs/workload.yml:/app/configs/workload.yml:ro
+    networks: [mgw]
+
+  protocol-agent-zigbee:
+    build:
+      context: .
+      dockerfile: services/protocol-agent/Dockerfile
+    environment:
+      - PROTOCOL=zigbee
+      - ACP_URL=http://acp-router:8002/ingest
+      - UDP_LISTEN=0.0.0.0:9002
+      - LOG_DIR=/logs/protocol-agent-zigbee
+      - P2P_MODE=${P2P_MODE:-0}
+    volumes:
+      - ./logs/protocol-agent-zigbee:/logs/protocol-agent-zigbee
+      - ./configs/workload.yml:/app/configs/workload.yml:ro
+    networks: [mgw]
+
+  protocol-agent-ble:
+    build:
+      context: .
+      dockerfile: services/protocol-agent/Dockerfile
+    environment:
+      - PROTOCOL=ble
+      - ACP_URL=http://acp-router:8002/ingest
+      - UDP_LISTEN=0.0.0.0:9003
+      - LOG_DIR=/logs/protocol-agent-ble
+      - P2P_MODE=${P2P_MODE:-0}
+    volumes:
+      - ./logs/protocol-agent-ble:/logs/protocol-agent-ble
+      - ./configs/workload.yml:/app/configs/workload.yml:ro
+    networks: [mgw]
+
+  proto-gen-lora:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: services/proto-gen/Dockerfile
+    environment:
+      - PROTOCOL=lora
+      - TARGET_UDP=protocol-agent-lora:9001
+      - IDENTITY_URL=http://identity-manager:8001
+      - LOG_DIR=/logs/proto-gen-lora
+      - RUN_DURATION_SEC=${RUN_DURATION_SEC:-60}
+      - START_DELAY_SEC=${START_DELAY_SEC:-2}
+    volumes:
+      - ./logs/proto-gen-lora:/logs/proto-gen-lora
+      - ./configs/workload.yml:/app/configs/workload.yml:ro
+    depends_on: [identity-manager, protocol-agent-lora]
+    networks: [mgw]
+
+  proto-gen-zigbee:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: services/proto-gen/Dockerfile
+    environment:
+      - PROTOCOL=zigbee
+      - TARGET_UDP=protocol-agent-zigbee:9002
+      - IDENTITY_URL=http://identity-manager:8001
+      - LOG_DIR=/logs/proto-gen-zigbee
+      - RUN_DURATION_SEC=${RUN_DURATION_SEC:-60}
+      - START_DELAY_SEC=${START_DELAY_SEC:-2}
+    volumes:
+      - ./logs/proto-gen-zigbee:/logs/proto-gen-zigbee
+      - ./configs/workload.yml:/app/configs/workload.yml:ro
+    depends_on: [identity-manager, protocol-agent-zigbee]
+    networks: [mgw]
+
+  proto-gen-ble:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: services/proto-gen/Dockerfile
+    environment:
+      - PROTOCOL=ble
+      - TARGET_UDP=protocol-agent-ble:9003
+      - IDENTITY_URL=http://identity-manager:8001
+      - LOG_DIR=/logs/proto-gen-ble
+      - RUN_DURATION_SEC=${RUN_DURATION_SEC:-60}
+      - START_DELAY_SEC=${START_DELAY_SEC:-2}
+    volumes:
+      - ./logs/proto-gen-ble:/logs/proto-gen-ble
+      - ./configs/workload.yml:/app/configs/workload.yml:ro
+    depends_on: [identity-manager, protocol-agent-ble]
+    networks: [mgw]
+
+  app-subscriber:
+    build:
+      context: .
+      dockerfile: services/app-subscriber/Dockerfile
+    environment:
+      - MQTT_HOST=mosquitto
+      - MQTT_PORT=1883
+      - TOPIC=auto
+      - P2P_MODE=${P2P_MODE:-0}
+      - LOG_DIR=/logs/app-subscriber
+      - APP_ID=${APP_ID:-auto}
+      - RUN_DURATION_SEC=${RUN_DURATION_SEC:-60}
+    volumes:
+      - ./logs/app-subscriber:/logs/app-subscriber
+    depends_on: [mosquitto]
+    networks: [mgw]
+
+networks:
+  mgw:
+    driver: bridge

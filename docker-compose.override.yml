@@ -1,0 +1,10 @@
+services:
+  proto-gen-lora:
+    volumes:
+      - ./services/proto-gen/app/main.py:/app/app/main.py:ro
+  proto-gen-zigbee:
+    volumes:
+      - ./services/proto-gen/app/main.py:/app/app/main.py:ro
+  proto-gen-ble:
+    volumes:
+      - ./services/proto-gen/app/main.py:/app/app/main.py:ro

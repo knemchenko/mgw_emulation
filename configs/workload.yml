@@ -1,0 +1,19 @@
+protocols:
+  lora:   { devices: 50, hz: 1, payload_bytes: 16 }
+  zigbee: { devices: 50, hz: 1, payload_bytes: 16 }
+  ble:    { devices: 50, hz: 1, payload_bytes: 16 }
+
+logical_id_prefix:
+  lora: "siteA/zone1"
+  zigbee: "siteA/zone2"
+  ble: "siteA/zone3"
+
+replacement:
+  enabled: true
+  at_seconds: 60
+  percent_devices: 5
+
+retries:
+  enabled: true
+  max_retries: 2
+  backoff_ms: 20
