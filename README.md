@@ -117,10 +117,14 @@ python tools/eval_exp2_traffic.py --logs ./logs --out ./results/exp2.json --wind
 ```
 
 Output fields:
-- `publisher.messages`, `publisher.bytes`: gateway→broker ingress (Semantic Core publishes).
-- `subscriber.messages`: total received across all app subscribers.
-- `topic_histogram_top10`: busiest topics.
-- `derived.subscriber_msgs_per_published_msg`: fan-out indicator.
+- `publisher.messages`, `publisher.bytes`: total gateway→broker publish overhead (Semantic Core publishes).
+- `subscriber.messages`: total messages received across all application subscribers.
+- `topic_histogram_top10`: busiest topics (all publishes).
+- `telemetry.publisher.*`, `telemetry.subscriber.*`, `telemetry.topic_histogram_top10`: telemetry-only breakdown (topics ending with `/telemetry`).
+- `frames.ingested_estimate`: estimated number of ingested frames in the window (unique `ts_core_in`).
+- `derived.publisher_msgs_per_frame`: publish overhead normalized per ingested frame (≈ 1 for UNS, ≈ APP_COUNT for P2P).
+- `derived.subscriber_msgs_per_published_msg`: fan-out indicator (≈ APP_COUNT in UNS with `APP_COUNT` subscribers).
+- `derived.window_sec`: analysis window length.
 
 ## Logs
 
