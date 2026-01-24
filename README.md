@@ -1,135 +1,77 @@
-# MGW Emulation Testbed (Protocol Agents → ACP Stub → Semantic Core → UNS/MQTT)
+# Semantic Protocol Translator for 6G-U Networks: Reference Implementation
 
-This repository provides a Docker-based emulation testbed to evaluate an M-GW pipeline:
-multi-protocol ingestion → ACP routing stub → ontology-driven Semantic Core → northbound MQTT/UNS.
+This repository contains the reference software implementation and evaluation scripts for the **Intelligent Multiprotocol Mesh Gateway (M-GW)** architecture described in our research.
 
-It is intended to generate reproducible, paper-ready metrics (e.g., traffic amplification in UNS vs P2P duplication).
+The project emulates a **Semantic Core** that provides:
+1.  **Bearer Independent Communication (BIC):** Decoupling application logic from physical radio protocols (LoRaWAN, ZigBee, BLE).
+2.  **Semantic Contract Invariance:** Normalizing heterogeneous payloads into a stable Unified Namespace (UNS).
+3.  **Ontology-Driven Validation:** Dynamic decoding and validation using a Knowledge Graph.
 
-## What is included
+## Related Publications
 
-- **Protocol generators** (LoRa-like, ZigBee-like, BLE-like): emit UDP frames at controlled rates.
-- **Protocol Agents**: receive UDP, attach trace metadata, and forward to ACP.
-- **ACP Router (stub)**: forwards to the Semantic Core.
-- **Semantic Core**: decodes frames (ontology-driven or hardcoded) and publishes to MQTT.
-- **MQTT broker (Mosquitto)**: provides the UNS pub/sub fabric.
-- **Application subscribers**: scale-out consumers for fan-out experiments.
+This code supports the experimental results presented in:
+* **"Architecture of Multiprotocol Translator for 6G-U Networks: An Ontological Approach"** (Submitted to IEEE BlackSeaCom 2026 / ICECET 2026).
 
-## Requirements
+## Hardware Setup
 
-- Docker Desktop (or Docker Engine)
-- Docker Compose v2
-- Python 3.10+ (for evaluation scripts)
+The performance benchmarks were conducted on the following reference hardware:
+* **Device:** Raspberry Pi 5 Model B
+* **SoC:** Broadcom BCM2712 (Quad-core Cortex-A76 @ 2.4GHz)
+* **RAM:** 8GB LPDDR4X
+* **OS:** Raspberry Pi OS (64-bit, Bookworm)
 
-## Configuration (.env)
+## Installation
 
-Docker Compose automatically loads a local `.env`. Use the provided template:
+1. Clone the repository:
+   ```bash
+   git clone [https://github.com/your-username/6g-semantic-gateway.git](https://github.com/your-username/6g-semantic-gateway.git)
+   cd 6g-semantic-gateway
+   ```
+   
+2. Create a virtual environment:
+    ```bash 
+    python3 -m venv venv
+    source venv/bin/activate
+   ```
+3. Install dependencies
+    ```bash 
+    pip install -r requirements.txt
+   ```
+## Experiments & Usage
 
-1) Copy:
+This repository includes two main experimental scripts corresponding to the evaluation sections of the paper.
+
+1. Latency & Robustness Analysis
+This repository includes two main experimental scripts corresponding to the evaluation sections of the research papers.
+
+### 1. Latency & Robustness Analysis
+Measures the internal processing latency of the Semantic Core (Lookup → Decode → Serialize) and validates the LRU caching mechanism under stochastic load.
+
+* **Target:** Real-time performance validation (Paper Section VII-A in BlackSeaCom submission).
+* **Script:** `src/gateway_perf.py`
+* **Output:**
+  * `fig_latency_breakdown.png` (Processing time per stage)
+  * `fig_robustness.png` (End-to-end latency histogram)
+
+**To run:**
 ```bash
-cp .env.example .env
+  python src/gateway_perf.py
 ```
 
-2) Adjust parameters:
+### 2. Scalability Analysis (UNS vs P2P)
+Quantifies publisher-side traffic amplification by comparing the proposed Unified Namespace (Fan-out) model against a Tenant-Isolated (Point-to-Point) baseline.
 
-- `APP_COUNT`: number of application subscribers (A).
-- `P2P_MODE`:
-  - `0` = UNS mode (Semantic Core publishes once to `mgw/...`, broker performs fan-out).
-  - `1` = P2P duplication (Semantic Core publishes to `mgw_p2p/appN/...` per app).
-- `DECODER_MODE`: `ontology` (default) or `hardcoded`.
-- `RUN_DURATION_SEC`: fixed experiment duration in seconds.
-- `START_DELAY_SEC`: optional generator delay before sending frames (helps ensure subscribers are ready).
-- `REGISTER_TIMEOUT_SEC`: how long generators retry Identity Manager registration before failing.
+* **Target:** Architectural scalability quantification (Paper Section VII-A in ICECET submission).
+* **Script:** `src/scalability_test.py`
+* **Output:**
+  * `fig_scalability_pubs.png` (MQTT Publish count comparison)
+  * `fig_scalability_bytes.png` (Traffic volume comparison)
+  * `fig_scalability_normalized.png` (Overhead per semantic update)
 
-**PowerShell note:** environment variables in the current shell can override `.env`.
-If you previously ran `P2P_MODE=0 ...` style commands, open a new shell or remove `Env:P2P_MODE` / `Env:APP_COUNT`.
-
-## Run
-
-**If Docker Hub is temporarily unavailable** (e.g., TLS handshake timeout) and you already built the images once,
-you can run without rebuilding:
-
+**To run:**
 ```bash
-docker compose up -d --no-build --scale app-subscriber=10
+  python src/scalability_test.py
 ```
 
-This repo includes a small `docker-compose.override.yml` that bind-mounts the generator entrypoint
-(`services/proto-gen/app/main.py`) into the running containers. This makes small hotfixes possible even when you
-cannot rebuild images.
-
-### 1) Start the stack (scale subscribers)
-
-From the repository root:
-```bash
-docker compose up --build --scale app-subscriber=10  # set to the same value as APP_COUNT in .env
-```
-
-Alternatively, run detached:
-```bash
-docker compose up -d --build --scale app-subscriber=10  # set to the same value as APP_COUNT in .env
-```
-
-The protocol generators and subscribers stop automatically after `RUN_DURATION_SEC`.
-Infrastructure services (broker, core, agents) keep running until you stop them.
-
-Stop everything:
-```bash
-docker compose down -v
-```
-
-### 2) Health check
-
-Semantic Core:
-```bash
-curl http://localhost:8003/health
-```
-
-## Exp2: Traffic amplification (UNS vs P2P)
-
-### Recommended procedure (clean runs)
-
-Before each run:
-```bash
-docker compose down -v
-rm -rf ./logs ./results
-mkdir -p ./results
-```
-
-Run (UNS):
-- Set `P2P_MODE=0` in `.env`
-- Start:
-```bash
-docker compose up -d --build --scale app-subscriber=10  # set to the same value as APP_COUNT in .env
-```
-
-Run (P2P):
-- Set `P2P_MODE=1` in `.env`
-- Start:
-```bash
-docker compose up -d --build --scale app-subscriber=10  # set to the same value as APP_COUNT in .env
-```
-
-### Evaluate
-
-After the run completes (or after waiting `RUN_DURATION_SEC`), compute metrics:
-
-```bash
-python tools/eval_exp2_traffic.py --logs ./logs --out ./results/exp2.json --window-sec 60  # set to RUN_DURATION_SEC
-```
-
-Output fields:
-- `publisher.messages`, `publisher.bytes`: total gateway→broker publish overhead (Semantic Core publishes).
-- `subscriber.messages`: total messages received across all application subscribers.
-- `topic_histogram_top10`: busiest topics (all publishes).
-- `telemetry.publisher.*`, `telemetry.subscriber.*`, `telemetry.topic_histogram_top10`: telemetry-only breakdown (topics ending with `/telemetry`).
-- `frames.ingested_estimate`: estimated number of ingested frames in the window (unique `ts_core_in`).
-- `derived.publisher_msgs_per_frame`: publish overhead normalized per ingested frame (≈ 1 for UNS, ≈ APP_COUNT for P2P).
-- `derived.subscriber_msgs_per_published_msg`: fan-out indicator (≈ APP_COUNT in UNS with `APP_COUNT` subscribers).
-- `derived.window_sec`: analysis window length.
-
-## Logs
-
-All services write JSONL logs into `./logs/<service>/events.jsonl`.
-
-The evaluator uses:
-- `logs/**/semantic-core/events.jsonl` (publish events)
-- `logs/**/app-subscriber/events.jsonl` (recv events)
+# License
+This project is licensed under the MIT License - see the LICENSE file for details.
