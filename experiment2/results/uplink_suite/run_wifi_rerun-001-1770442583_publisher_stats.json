@@ -1,0 +1,20 @@
+{
+  "run_id": "wifi_rerun-001-1770442583",
+  "iface": "wlan0",
+  "broker": "192.168.2.100",
+  "port": 1883,
+  "mode": "uns",
+  "n_app": 1,
+  "lam": 2.0,
+  "qos": 0,
+  "payload_bytes": 256,
+  "duration_s": 60.0,
+  "publish_count": 120,
+  "semantic_updates": 120,
+  "tx_bytes": 106049,
+  "tx_kbps": 14.139848077244002,
+  "cpu_user_s": 0.010000000000000009,
+  "cpu_system_s": 0.01,
+  "wall_s": 60.00007888100026,
+  "idle_kbps_before": 8.576
+}

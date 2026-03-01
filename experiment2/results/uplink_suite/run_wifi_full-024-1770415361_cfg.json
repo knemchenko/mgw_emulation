@@ -1,0 +1,10 @@
+{
+  "run_id": "wifi_full-024-1770415361",
+  "mode": "replication",
+  "n_app": 5,
+  "lam": 50.0,
+  "qos": 1,
+  "payload_bytes": 1024,
+  "duration_s": 60.0,
+  "note": ""
+}

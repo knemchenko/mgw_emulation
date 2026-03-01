@@ -1,77 +1,39 @@
-# Semantic Protocol Translator for 6G-U Networks: Reference Implementation
+# mgw_emulation — Experiments
 
-This repository contains the reference software implementation and evaluation scripts for the **Intelligent Multiprotocol Mesh Gateway (M-GW)** architecture described in our research.
+This repository contains reproducible experiments related to the M-GW / Semantic Protocol Translator (SPT) used in the 6G‑GUIDENET context (6G‑U / edge‑to‑cloud data delivery).
 
-The project emulates a **Semantic Core** that provides:
-1.  **Bearer Independent Communication (BIC):** Decoupling application logic from physical radio protocols (LoRaWAN, ZigBee, BLE).
-2.  **Semantic Contract Invariance:** Normalizing heterogeneous payloads into a stable Unified Namespace (UNS).
-3.  **Ontology-Driven Validation:** Dynamic decoding and validation using a Knowledge Graph.
+## Experiments
 
-## Related Publications
+### Experiment 1 — Semantic Protocol Translator (Baseline & Paper Reproducibility)
+Contains the core Python implementation of the Semantic Core and the simulation scripts used for architectural validation in our research papers.
 
-This code supports the experimental results presented in:
-* **"Architecture of Multiprotocol Translator for 6G-U Networks: An Ontological Approach"** (Submitted to IEEE BlackSeaCom 2026 / ICECET 2026).
+This baseline module covers:
+- **Internal Latency & Robustness:** Benchmarking the "Lookup → Decode → Serialize" hot path and security filtering on Raspberry Pi 5. (**IEEE BlackSeaCom 2025**)
+- **Traffic Scalability Analysis:** Emulation of publisher-side traffic amplification comparing UNS (Fan-out) vs P2P (Tenant-Isolated) models. (**ICECET 2026**)
 
-## Hardware Setup
+**Location:** `experiment1/`  
+**Key Scripts:** `gateway_perf.py`, `scalability_test.py`
+### Expirement 2 — Uplink scalability: gateway-side replication vs UNS fan-out (Raspberry Pi ↔ Server)
+A reproducible testbed that compares two delivery policies for semantic updates over MQTT:
 
-The performance benchmarks were conducted on the following reference hardware:
-* **Device:** Raspberry Pi 5 Model B
-* **SoC:** Broadcom BCM2712 (Quad-core Cortex-A76 @ 2.4GHz)
-* **RAM:** 8GB LPDDR4X
-* **OS:** Raspberry Pi OS (64-bit, Bookworm)
+- **replication**: the gateway publishes **N_app** times (per-tenant topics) → uplink scales ~O(N_app)
+- **uns**: the gateway publishes **once** into a **Unified Namespace (UNS)** topic → broker fan-out handles multiple consumers
 
-## Installation
+Metrics collected:
+- Raspberry Pi (publisher): interface-level uplink TX (kbps), CPU time, publish counters
+- Server (subscriber): one-way latency percentiles (p50/p95/p99), max/mean, message loss proxy
+- Post-processing: `merged.csv` + plots in `figures/`
 
-1. Clone the repository:
-   ```bash
-   git clone [https://github.com/your-username/6g-semantic-gateway.git](https://github.com/your-username/6g-semantic-gateway.git)
-   cd 6g-semantic-gateway
-   ```
-   
-2. Create a virtual environment:
-    ```bash 
-    python3 -m venv venv
-    source venv/bin/activate
-   ```
-3. Install dependencies
-    ```bash 
-    pip install -r requirements.txt
-   ```
-## Experiments & Usage
+See: `expirement2/README.md`
 
-This repository includes two main experimental scripts corresponding to the evaluation sections of the paper.
+## Repository layout
 
-1. Latency & Robustness Analysis
-This repository includes two main experimental scripts corresponding to the evaluation sections of the research papers.
+- `expirement1/` — baseline (original repo content moved here)
+- `expirement2/` — uplink-suite experiment (raspberry/server scripts + reproduction guide)
 
-### 1. Latency & Robustness Analysis
-Measures the internal processing latency of the Semantic Core (Lookup → Decode → Serialize) and validates the LRU caching mechanism under stochastic load.
+## Hardware & Environment
+- **Reference Hardware:** Raspberry Pi 5 (Broadcom BCM2712, Cortex-A76 @ 2.4GHz)
+- **Environment:** Python 3.x
+- **Dependencies:** `paho-mqtt`, `matplotlib`, `numpy` (install via `pip install -r requirements.txt`)
 
-* **Target:** Real-time performance validation (Paper Section VII-A in BlackSeaCom submission).
-* **Script:** `src/gateway_perf.py`
-* **Output:**
-  * `fig_latency_breakdown.png` (Processing time per stage)
-  * `fig_robustness.png` (End-to-end latency histogram)
-
-**To run:**
-```bash
-  python src/gateway_perf.py
-```
-
-### 2. Scalability Analysis (UNS vs P2P)
-Quantifies publisher-side traffic amplification by comparing the proposed Unified Namespace (Fan-out) model against a Tenant-Isolated (Point-to-Point) baseline.
-
-* **Target:** Architectural scalability quantification (Paper Section VII-A in ICECET submission).
-* **Script:** `src/scalability_test.py`
-* **Output:**
-  * `fig_scalability_pubs.png` (MQTT Publish count comparison)
-  * `fig_scalability_bytes.png` (Traffic volume comparison)
-  * `fig_scalability_normalized.png` (Overhead per semantic update)
-
-**To run:**
-```bash
-  python src/scalability_test.py
-```
-
-# License
-This project is licensed under the MIT License - see the LICENSE file for details.
+---

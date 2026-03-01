@@ -1,0 +1,19 @@
+{
+  "run_id": "wifi_full-039-1770416291",
+  "iface": "wlan0",
+  "broker": "192.168.2.100",
+  "port": 1883,
+  "mode": "replication",
+  "n_app": 20,
+  "lam": 2.0,
+  "qos": 1,
+  "payload_bytes": 256,
+  "duration_s": 60.0,
+  "publish_count": 2400,
+  "semantic_updates": 120,
+  "tx_bytes": 735699,
+  "tx_kbps": 98.0930981581111,
+  "cpu_user_s": 0.1399999999999988,
+  "cpu_system_s": 0.10000000000000009,
+  "wall_s": 60.0000622929997
+}

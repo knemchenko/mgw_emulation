@@ -1,0 +1,10 @@
+{
+  "run_id": "wifi_full-071-1770418275",
+  "mode": "uns",
+  "n_app": 1,
+  "lam": 50.0,
+  "qos": 1,
+  "payload_bytes": 256,
+  "duration_s": 60.0,
+  "note": ""
+}
